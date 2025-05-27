@@ -85,7 +85,28 @@ K_TIMER_DEFINE(heartbeatTimer, heartbeatTimerHandlerCb, NULL); //This timer is u
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 
-//Stop timer, update the value and start the timer again based on the new value and the timer in the input parameter
+//Function prototypes
+void Pam80053AzureDeviceTwinCb();
+void L4ConnectionManagerCb(const l4ConnectionManagerEvent* event);
+void AzureManagerStatusCb(const azureManagerEvent* event);
+void UniversalAlarmInputCb(const InputEvent* event);
+void heartbeatTimerHandlerCb(struct k_timer *timer);
+
+//Function prototypes for telemetry functions
+void FormatTimestamp(char* pBuffer, size_t bufferSize, uint64_t timestamp);
+cJSON *CreateConnectionDataObject();
+cJSON* CreateAlarmObject(const Alarm* pAlarm, uint8_t alarmChannel);
+cJSON* CreateHeartbeatTelemetry(void);
+void TransmitHeartbeatTelemetry(void);
+
+void updateTimer(struct k_timer *timer, uint32_t newInterval);
+
+
+
+
+
+//Convience functions
+//_____________________________________________________________________________________________________________________
 void updateTimer(struct k_timer *timer, uint32_t newInterval)
 {
 	k_timer_stop(timer); //Stop the timer
@@ -148,9 +169,14 @@ void UniversalAlarmInputCb(const InputEvent* event)
 	}
 }
 
+bool transmitHeartbeatTelemetry = false;
+
 void heartbeatTimerHandlerCb(struct k_timer *timer) 
 {
     printk("Timer expired!\n");
+	//TransmitHeartbeatTelemetry();
+	transmitHeartbeatTelemetry = true;
+	LOG_INF("Heartbeat telemetry sent, waiting for next interval of %ds", heartbeatSendInterval);
 }
 
 
@@ -352,6 +378,7 @@ int main(void)
 		UniversalAlarmInputInit(UniversalAlarmInputCb);
 		UniversalAlarmInputSetMode(0, UIM_DIGITAL_INPUT_NC);
 		UniversalAlarmInputSetMode(1, UIM_DIGITAL_INPUT_NC);
+		UniversalAlarmInputStart();
 		//Initialize the relay control module
 
 	//RS485 dependent modules initialization
@@ -403,7 +430,7 @@ int main(void)
 			DeviceRebootError();
 		}
 		LOG_INF("Azure manager initialization successful");
-		
+	
 
 	//Zigbee dependent modules initialization
 	//Initialize the Zigbee manager
@@ -411,7 +438,7 @@ int main(void)
 
 	//Setup of the different modules
 
-	k_timer_start(&heartbeatTimer, K_NO_WAIT, K_SECONDS(heartbeatSendInterval)); //Start the heartbeat timer with the initial interval
+	k_timer_start(&heartbeatTimer, K_SECONDS(heartbeatSendInterval), K_SECONDS(heartbeatSendInterval)); //Start the heartbeat timer with the initial interval
 	
 	while(1)
 	{
@@ -432,8 +459,16 @@ int main(void)
 			{
 				telemetryHeartbeat = heartbeatSendInterval;
 			}
-		}				
-		k_sleep(K_MSEC(1000));
+		}		
+		
+		if (transmitHeartbeatTelemetry)
+		{
+			TransmitHeartbeatTelemetry();
+			transmitHeartbeatTelemetry = false; //Reset the flag
+		}
+			
+		k_sleep(K_MSEC(1000));	
 	}
+		
 	return 0;
 }

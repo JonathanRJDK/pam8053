@@ -155,14 +155,14 @@ void adcSampleTimerCb(struct k_timer *timer_id)
 }
 
 
-void adcTurnOff()
+void AdcDtsTurnOff()
 {
 	k_timer_stop(&adcSampleTimer);
 	LOG_INF("ADC turned off (sample timer stopped)");
 }
 
 //This function is only for when the adcInit has been called, and then the adcTurnOff was called
-void adcTurnOn()
+void AdcDtsTurnOn()
 {
 	LOG_INF("ADC turned on (sample timer starting)");
 	k_timer_start(&adcSampleTimer, K_MSEC(ADC_SAMPLE_TIME_MS), K_MSEC(ADC_SAMPLE_TIME_MS));	
