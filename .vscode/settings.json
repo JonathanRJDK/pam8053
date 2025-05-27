@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "powermeterfiltering.h": "c",
+        "nrfprovisioningazure.h": "c",
+        "pam8053azuredevicetwin.h": "c",
+        "devicesettings.h": "c",
+        "inttypes.h": "c",
+        "azure_iot_hub.h": "c",
+        "azuremanager.h": "c",
+        "stddef.h": "c",
+        "stdbool.h": "c",
+        "azure_iot_hub_dps.h": "c",
+        "compare": "c",
+        "modemcommunicator.h": "c",
+        "log.h": "c",
+        "universalalarminput.h": "c",
+        "adcdts.h": "c",
+        "gpio.h": "c",
+        "relaycontrol.h": "c",
+        "devicereboot.h": "c"
+    }
+}
