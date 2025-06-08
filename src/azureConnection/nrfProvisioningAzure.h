@@ -33,7 +33,7 @@
 //The default configuration for this application is that a main CA cert, is stored with a client cert and private key at security tag 1
 //A second CA cert is also stored at security tag 2. This is per recommendation from Azure (Might not be needed in the future!)
 
-#define TIME_TO_CHANGE_PROVISIONED_DATA  1 //Time to wait for the user to change the provisioned data, if not changed it will be kept
+#define TIME_TO_CHANGE_PROVISIONED_DATA  10 //Time to wait for the user to change the provisioned data, if not changed it will be kept
 
 //Include libraries needed for the header to compile, often simple libraries like inttypes.h
 #include <stdint.h>
@@ -47,7 +47,7 @@
 extern "C" {
 #endif
 //Functions that should be accessible from the outside 
-int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf, char *serialNoBuf);
+int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf, char *serialNoBuf, uint16_t timeToChangeProvData);
 
 #ifdef __cplusplus
 }

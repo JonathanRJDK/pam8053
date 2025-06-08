@@ -13,6 +13,10 @@ typedef struct
     uint16_t heartbeatInterval; //This is the heartbeat interval in seconds
     uint16_t powerMeterInterval; //This is the power meter interval in seconds
     uint8_t doorStatus; //This is the door status, 0 = closed, 1 = open, 2 = locked
+    uint16_t doorCode;
+
+    bool relay1Status; //Relay status, true = on, false = off
+    bool relay2Status; //Relay status, true = on, false = off
 
     uint16_t alarm0Priority;
     char alarm0Name[64];

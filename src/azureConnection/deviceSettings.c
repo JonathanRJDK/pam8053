@@ -10,7 +10,7 @@
 
 //#define STATIC_HANDLER_DECLARATION
 
-LOG_MODULE_REGISTER(deviceSettings, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(deviceSettings, LOG_LEVEL_ERR);
 
 typedef struct 
 {
@@ -26,7 +26,7 @@ static DeviceSettingsCtx ctx;
 
 static bool serialSet = false;
 
-static char serialNo[10]; 
+static char serialNo[16]; 
 static char deviceId[16];
 static char scopeId[16]; //= CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE;
 
@@ -108,9 +108,9 @@ int DeviceSettingLoaded(void)
 		//These values should be changed and used on devices that where deployed without the NVS storage of device id and scope
 		//This is no longer needed, since the device id and scope id is now stored in the NVS partition from the beginning
 		
-		DeviceSettingsSaveDeviceId("PAM8002_1040", 12);
-		DeviceSettingsSaveSerialNo("0000-0000", 9);
-		DeviceSettingsSaveScopeId("0ne008A3851", 11);
+		//DeviceSettingsSaveDeviceId("PAM8002_1040", 12);
+		//DeviceSettingsSaveSerialNo("0000-0000", 9);
+		//DeviceSettingsSaveScopeId("0ne008A3851", 11);
 		
 	}
 

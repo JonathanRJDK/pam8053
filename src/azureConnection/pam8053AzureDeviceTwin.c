@@ -45,7 +45,10 @@ void Pam8053DeviceTwinCb(const char *rxDeviceTwinBuf)
 		cJSON *heartbeatTelemetryConfigObj; 
 		cJSON *powerMeterTelemetryConfigObj;
 
-    cJSON *doorStatusObj;
+	cJSON *doorCodeObj;
+
+	cJSON *relay1StatusObj;
+	cJSON *relay2StatusObj;
 
 	cJSON *u0ConfigObj;
 	cJSON *alarm0PriorityObj; 
@@ -87,11 +90,23 @@ void Pam8053DeviceTwinCb(const char *rxDeviceTwinBuf)
 			LOG_DBG("No 'sendInterval' object found in the device twin document");
 		}
 
-    doorStatusObj = cJSON_GetObjectItem(desiredObj, "doorStatus");
-    if (doorStatusObj == NULL)
+    doorCodeObj = cJSON_GetObjectItem(desiredObj, "doorCodeObj");
+    if (doorCodeObj == NULL)
     {
-        LOG_DBG("No 'doorStatus' object found in the device twin document");
+        LOG_DBG("No 'doorCodeObj' object found in the device twin document");
     }
+
+	relay1StatusObj = cJSON_GetObjectItem(desiredObj, "relay1Status");
+	if (relay1StatusObj == NULL) 
+	{
+		LOG_DBG("No 'relay1Status' object found in the device twin document");
+	}
+
+	relay2StatusObj = cJSON_GetObjectItem(desiredObj, "relay2Status");
+	if (relay2StatusObj == NULL) 
+	{
+		LOG_DBG("No 'relay2Status' object found in the device twin document");
+	}
 
 	u0ConfigObj = cJSON_GetObjectItem(desiredObj, "u0Config");
 	if (u0ConfigObj == NULL) 
@@ -146,6 +161,33 @@ void Pam8053DeviceTwinCb(const char *rxDeviceTwinBuf)
 	else 
 	{
 		LOG_ERR("Invalid power meter interval format received");
+	}
+
+	if(cJSON_IsNumber(doorCodeObj)) 
+	{
+		pam8053DTStruct->doorCode = doorCodeObj->valueint;
+	}
+	else 
+	{
+		LOG_ERR("Invalid door status format received");
+	}
+
+	if(cJSON_IsBool(relay1StatusObj)) 
+	{
+		pam8053DTStruct->relay1Status = relay1StatusObj->valueint;
+	}
+	else 
+	{
+		LOG_ERR("Invalid relay 1 status format received");
+	}
+
+	if(cJSON_IsBool(relay2StatusObj)) 
+	{
+		pam8053DTStruct->relay2Status = relay2StatusObj->valueint;
+	}
+	else 
+	{
+		LOG_ERR("Invalid relay 2 status format received");
 	}
 
 	if (cJSON_IsNumber(alarm0PriorityObj)) 
@@ -260,6 +302,22 @@ void Pam8053TwinReportWork()
         return;
     }
 
+	cJSON *relay1StatusObj = cJSON_CreateObject();
+	if (!relay1StatusObj)
+	{
+		LOG_ERR("Failed to create relay1Status JSON object");
+		cJSON_Delete(root);
+		return;
+	}
+
+	cJSON *relay2StatusObj = cJSON_CreateObject();
+	if (!relay2StatusObj)
+	{
+		LOG_ERR("Failed to create relay2Status JSON object");
+		cJSON_Delete(root);
+		return;
+	}
+
 	cJSON *u0ConfigObj = cJSON_CreateObject();
 	if (!u0ConfigObj)
 	{
@@ -297,6 +355,15 @@ void Pam8053TwinReportWork()
     cJSON_AddItemToObject(root, "doorStatus", doorStatusObj);
 	cJSON_AddNumberToObject(doorStatusObj, "status", pam8053DTStruct->doorStatus);
 
+	//Add relay1Status to the JSON object
+	cJSON_AddItemToObject(root, "relay1Status", relay1StatusObj);
+	cJSON_AddBoolToObject(relay1StatusObj, "status", pam8053DTStruct->relay1Status);
+
+	//Add relay2Status to the JSON object
+	cJSON_AddItemToObject(root, "relay2Status", relay2StatusObj);
+	cJSON_AddBoolToObject(relay2StatusObj, "status", pam8053DTStruct->relay2Status);
+
+
 	//Add u0Config to the JSON object
 	cJSON_AddItemToObject(root, "u0Config", u0ConfigObj);
 		cJSON_AddNumberToObject(u0ConfigObj, "alarm0Priority", pam8053DTStruct->alarm0Priority);
@@ -312,7 +379,7 @@ void Pam8053TwinReportWork()
 		cJSON_AddStringToObject(deviceInfo, "serialNo", serialNo);
 		cJSON_AddNumberToObject(deviceInfo, "mobileBand", band);
 		cJSON_AddStringToObject(deviceInfo, "version", CONFIG_AZURE_FOTA_APP_VERSION);
-		cJSON_AddStringToObject(deviceInfo, "model", "PAM8002");
+		cJSON_AddStringToObject(deviceInfo, "model", "PAM8053");
 
     
 	cJSON_PrintPreallocated(root,jsonString,sizeof(jsonString),false);

@@ -49,8 +49,6 @@ void AdcDtsTurnOn();
 int AdcDtsSetCtrl1(int inputChannel);
 int AdcDtsSetCtrl2(int inputChannel);
 
-//Set the alarm mode, the enum 'alarmModeTypes' can be used to declare the mode
-int AdcDtsSetAlarmMode(int alarmMode, int inputChannel);
 
 #ifdef __cplusplus
 }

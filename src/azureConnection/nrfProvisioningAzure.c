@@ -390,7 +390,7 @@ void DeviceSettingsHandler(DeviceSettingsStatus status)
 //Main function of the module which checks for already provisioned data, skips if it exits otherwise prompts the different data that needs to be provisioned
 //in order for an application to connect to Microsoft Azure IoT hub using a SoftSim from ONOMONDO. 
 //Returns a -1 upon error and 0 upon success
-int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf, char *serialNoBuf)
+int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf, char *serialNoBuf, uint16_t timeToChangeProvData)
 {
 	int err;
 	int result;
@@ -478,9 +478,9 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 0) 
 				{
 					LOG_DBG("Found device id: %s", bufferDeviceId.ptr);
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else",TIME_TO_CHANGE_PROVISIONED_DATA);
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else",timeToChangeProvData);
 					//Check if the user wants to change the device id
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing device id to something else!");
@@ -537,9 +537,9 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 0) 
 				{
 					LOG_DBG("Found id scope: %s", bufferIdScope.ptr);
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
 					//Check if the user wants to change the device id
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing id scope to something else!");
@@ -596,9 +596,9 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 0) 
 				{
 					LOG_DBG("Found serial number: %s", bufferSerialNo.ptr);
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
 					//Check if the user wants to change the device id
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing serial number to something else!");
@@ -655,8 +655,8 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 1) 
 				{
 					LOG_DBG("Found main CA certificate!");
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing main CA certificate to something else!");
@@ -712,8 +712,8 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 1) 
 				{
 					LOG_DBG("Found secondary CA certificate!");
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing secondary CA certificate to something else!");
@@ -767,8 +767,8 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 1) 
 				{
 					LOG_DBG("Found client certificate!");
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing client certificate to something else!");
@@ -822,8 +822,8 @@ int NrfProvisioningAzureRunProvisioningCheck(char *deviceIdBuf, char *idScopeBuf
 				if(err == 1) 
 				{
 					LOG_DBG("Found private key!");
-					LOG_DBG("Send a 'C' within %d seconds to change this to something else", TIME_TO_CHANGE_PROVISIONED_DATA);
-					result = checkForCharInInputBuffer('C', K_SECONDS(TIME_TO_CHANGE_PROVISIONED_DATA));
+					LOG_DBG("Send a 'C' within %d seconds to change this to something else", timeToChangeProvData);
+					result = checkForCharInInputBuffer('C', K_SECONDS(timeToChangeProvData));
 					if(result == 1)
 					{
 						LOG_DBG("Changing private key to something else!");

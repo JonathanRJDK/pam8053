@@ -77,9 +77,17 @@ float dbMax = -100;
 float dbmMin = 0;
 float dbmMax = -100;
 
+uint16_t timeToChangeProv = 0;
+
+bool transmitHeartbeatTelemetry = false;
+bool transmitEnergyMeterReading = false;
 
 void heartbeatTimerHandlerCb(struct k_timer *timer) ;
 K_TIMER_DEFINE(heartbeatTimer, heartbeatTimerHandlerCb, NULL); //This timer is used to send the heartbeat telemetry at the specified interval
+
+void energyMeterTimerHandlerCb(struct k_timer *timer) ;
+K_TIMER_DEFINE(energyMeterTimer, energyMeterTimerHandlerCb, NULL); //This timer is used to send the energy meter readings at the specified interval
+
 
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
@@ -120,18 +128,42 @@ void updateTimer(struct k_timer *timer, uint32_t newInterval)
 void Pam80053AzureDeviceTwinCb()
 {
 	LOG_INF("AzureDeviceTwinCb called");
-	//Update the local variables with the values from the device twin
-	heartbeatSendInterval = pam8053DtStruct.heartbeatInterval;
 
-	telemetryHeartbeat = heartbeatSendInterval; //Set the heartbeat interval to the same value as the device twin value to ensure the new value is used right away
-	updateTimer(&heartbeatTimer, heartbeatSendInterval); //Update the timer with the new interval
+	updateTimer(&heartbeatTimer, pam8053DtStruct.heartbeatInterval); //Update the timer with the new interval
+	updateTimer(&energyMeterTimer, pam8053DtStruct.powerMeterInterval);//Update the timer with the new interval
+
+	//Update relays
+	if(pam8053DtStruct.relay1Status == 1)
+	{
+		RelayControlRelayOn(1);
+	}
+	else
+	{
+		RelayControlRelayOff(1);
+	}
+
+	if(pam8053DtStruct.relay2Status == 1)
+	{
+		RelayControlRelayOn(2);
+	}
+	else
+	{
+		RelayControlRelayOff(2);
+	}
+
+	//Print the door code for debug purpose
+	//ToDo Add communication and send this to code panel
+	if(pam8053DtStruct.doorCode != NULL)
+	{
+		LOG_INF("Recived door code: %d",pam8053DtStruct.doorCode);
+	}
 
 	LOG_INF("New heartbeat interval has been set to %ds", heartbeatSendInterval);
 }
 
 void L4ConnectionManagerCb(const l4ConnectionManagerEvent* event)
 {
-	int8_t L4ConnectionManagerStatusGlobal = event->event;
+	L4ConnectionManagerStatusGlobal = event->event;
 	LOG_INF("networkStatusGlobal has value: %d",L4ConnectionManagerStatusGlobal);
 }
 
@@ -169,17 +201,75 @@ void UniversalAlarmInputCb(const InputEvent* event)
 	}
 }
 
-bool transmitHeartbeatTelemetry = false;
+void CodePanelStatusCb(const codepanelEvent* event)
+{
+	//Handle the code panel status events here
+	switch (event->status)
+	{
+		case CODE_PANEL_INIT:
+			LOG_INF("Code panel initialized");
+		break;
+
+		case CODE_PANEL_CODE_ENTERED:
+			LOG_INF("Code entered");
+		break;
+
+		case CODE_PANEL_CODE_ERROR:
+			LOG_ERR("Code error: %d", event->errorCode);
+			//ToDo add a report to the Azure device twin
+			
+		break;
+
+		case DOOR_OPEN:
+			LOG_INF("Door opened");
+			//ToDo add a report to the Azure device twin
+			IndicatorModuleLedBlinkFast(GREEN_LED); //Blink the green LED to indicate that the door was opened
+		break;
+
+		case DOOR_CLOSED:
+			LOG_INF("Door closed");
+			//ToDo add a report to the Azure device twin
+			IndicatorModuleLedOff(GREEN_LED); //Turn of the green LED to indicate that the door was closed
+		break;
+
+		default:
+			LOG_WRN("Unhandled code panel event type %d", event->status);
+		break;
+	}
+}
 
 void heartbeatTimerHandlerCb(struct k_timer *timer) 
 {
-    printk("Timer expired!\n");
-	//TransmitHeartbeatTelemetry();
+    LOG_DBG("Timer expired!");
 	transmitHeartbeatTelemetry = true;
-	LOG_INF("Heartbeat telemetry sent, waiting for next interval of %ds", heartbeatSendInterval);
+	LOG_INF("Heartbeat telemetry sent, waiting for next interval of %ds", pam8053DtStruct.heartbeatInterval);
 }
 
+void energyMeterTimerHandlerCb(struct k_timer *timer) 
+{
+    LOG_DBG("Timer expired!");
+	transmitEnergyMeterReading = true;
+}
 
+void buttonsHandlerCb(const buttonsHandlerEvent* status)
+{
+
+	LOG_INF("Button pressed: %d", status->buttonId);
+	/*
+	if (status->status == BUTTON_PRESSED) 
+	{
+		if (status->buttonId == 0) //Button 0 pressed
+		{
+			
+			
+		}
+	}
+	else if (status->status == BUTTON_RELEASED) 
+	{
+
+	}	
+	*/
+}
 
 //Telemertry functions
 //_____________________________________________________________________________________________________________________
@@ -360,25 +450,55 @@ void TransmitHeartbeatTelemetry(void)
 
 
 
+void TransmitEnergyMeterTelemtry(void)
+{
+	if (azureConnected)
+	{
+		//cJSON* pTelemetryObject = CreateFullAlarmTelemetry();
+		//cJSON* pTelemetryObject = CreateEnertyTelemetry();
 
-//Main function
-//_____________________________________________________________________________________________________________________
-int main(void)
+		//"Export" the json object to the adcTelemetryBuffer
+		//cJSON_PrintPreallocated(pTelemetryObject, telemetryBuffer, sizeof(telemetryBuffer), false);
+		
+		//cJSON_Delete(pTelemetryObject);
+	
+		//Send the telemetry data 
+		//AzureManagerSendTelemetry(telemetryBuffer);
+	}
+	else
+	{
+		LOG_INF("Azure is not connected, cannot send telemetry data!");
+	}
+}
+
+void setup()
 {
 	int err;
-	LOG_INF("Starting PAM8053 device, firmware version: %s", CONFIG_AZURE_FOTA_APP_VERSION);
 
-
+	
 	//GPIO dependent modules initialization
 		//Initialize the button module
 
+		ButtonsHandlerInit(buttonsHandlerCb);
+		ButtonsHandlerStart(GPIO_INT_EDGE_BOTH); //Start the button handler with edge both, this will trigger on both rising and falling edges
+
 		//Initialize the indicator module
+		IndicatorModuleInit(); //Initialize the indicator module, this will set the initial state of the indicators
+		IndicatorModuleStart(); //Start the indicator module, this will enable the indicators
+
+
+		
 
 		//Initialize the module for universal alarm inputs
 		UniversalAlarmInputInit(UniversalAlarmInputCb);
 		UniversalAlarmInputSetMode(0, UIM_DIGITAL_INPUT_NC);
 		UniversalAlarmInputSetMode(1, UIM_DIGITAL_INPUT_NC);
 		UniversalAlarmInputStart();
+
+
+		IndicatorModuleLedBlinkSlow(RED_LED); 
+
+
 		//Initialize the relay control module
 
 	//RS485 dependent modules initialization
@@ -392,7 +512,7 @@ int main(void)
 
 	//Azure connection modules initialization
 		//Run provisioning check
-		err = NrfProvisioningAzureRunProvisioningCheck(deviceId, idScope, serialNo);
+		err = NrfProvisioningAzureRunProvisioningCheck(deviceId, idScope, serialNo, timeToChangeProv);
 		if (err < 0)
 		{
 			LOG_ERR("Provisioning check failed, rebooting device");
@@ -401,12 +521,11 @@ int main(void)
 
 		//Initialize the device settings module
 	
-		
 		//Initialize the device twin module for PAM8053
 		Pam8053AzureDeviceTwinSetup(&pam8053DtStruct, Pam80053AzureDeviceTwinCb);
 
 		//initialize l4 connection manager
-		err =L4ConnectionManagerNetworkInit(L4ConnectionManagerCb);
+		err = L4ConnectionManagerNetworkInit(L4ConnectionManagerCb);
 		if (err < 0)
 		{
 			LOG_ERR("L4 connection manager initialization failed, rebooting device");
@@ -423,7 +542,7 @@ int main(void)
 		LOG_INF("L4 connection manager network connect successful");
 
 		//Initialize the Azure connection manager
-		err = AzureManagerInit(AzureManagerStatusCb, Pam8053DeviceTwinCb, deviceId, idScope);
+		err = AzureManagerInit(AzureManagerStatusCb, Pam8053DeviceTwinCb, "PAM8002_1040", "0ne008A3851");//deviceId, idScope);
 		if (err < 0)
 		{
 			LOG_ERR("Azure manager initialization failed, rebooting device");
@@ -431,7 +550,6 @@ int main(void)
 		}
 		LOG_INF("Azure manager initialization successful");
 	
-
 	//Zigbee dependent modules initialization
 	//Initialize the Zigbee manager
 	
@@ -439,9 +557,27 @@ int main(void)
 	//Setup of the different modules
 
 	k_timer_start(&heartbeatTimer, K_SECONDS(heartbeatSendInterval), K_SECONDS(heartbeatSendInterval)); //Start the heartbeat timer with the initial interval
-	
+	k_timer_start(&energyMeterTimer, K_SECONDS(pam8053DtStruct.powerMeterInterval), K_SECONDS(pam8053DtStruct.powerMeterInterval)); //Start the energy meter timer with the initial interval
+
+}
+
+
+
+
+//Main function
+//_____________________________________________________________________________________________________________________
+int main(void)
+{
+	int err;
+	LOG_INF("Starting PAM8053 device, firmware version: %s", CONFIG_AZURE_FOTA_APP_VERSION);
+
+	setup(); //Setup the modules
+	k_sleep(K_MSEC(1000)); //Wait for the modules to initialize
+
+		
 	while(1)
 	{
+
 		if (!azureConnected && L4ConnectionManagerStatusGlobal == L4_CNCT_MNG_NETWORK_CONNECTED)
 		{
 			LOG_INF("Connecting to Azure...");
@@ -452,21 +588,35 @@ int main(void)
 				DeviceRebootError();
 			}
 		}
-
-		if (azureConnected)
-		{
-			if (telemetryHeartbeat > 0 && --telemetryHeartbeat == 0)
-			{
-				telemetryHeartbeat = heartbeatSendInterval;
-			}
-		}		
 		
 		if (transmitHeartbeatTelemetry)
 		{
 			TransmitHeartbeatTelemetry();
+			LOG_INF("Heartbeat telemetry sent, waiting for next interval of %ds", pam8053DtStruct.heartbeatInterval);
 			transmitHeartbeatTelemetry = false; //Reset the flag
 		}
-			
+
+
+
+		if (transmitEnergyMeterReading)
+		{
+			TransmitEnergyMeterTelemtry();
+			LOG_INF("Energy meter reading sent, waiting for next interval of %ds", pam8053DtStruct.powerMeterInterval);
+			transmitEnergyMeterReading = false; //Reset the flag
+		}
+
+		if(ZigbeeManagerGetTemp(1) < 18.0)//If the temperature is below 18 degrees Celsius, turn on the heating
+		{
+			LOG_INF("Temperature is below 18 degrees Celsius, turning on the heating");
+			RelayControlRelayOn(1); //Turn on the heating relay
+		} 
+		else if(ZigbeeManagerGetTemp(1) > 22.0) //If the temperature is above 22 degrees Celsius, turn off the heating
+		{
+			LOG_INF("Temperature is above 22 degrees Celsius, turning off the heating");
+			RelayControlRelayOff(1); //Turn off the heating relay
+		}
+
+
 		k_sleep(K_MSEC(1000));	
 	}
 		

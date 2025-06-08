@@ -17,6 +17,10 @@
         "adcdts.h": "c",
         "gpio.h": "c",
         "relaycontrol.h": "c",
-        "devicereboot.h": "c"
+        "devicereboot.h": "c",
+        "buttonmodule.h": "c",
+        "indicatormodule.h": "c",
+        "zigbeemanager.h": "c",
+        "stdint.h": "c"
     }
 }

@@ -23,7 +23,9 @@ extern "C" {
 #endif
 //Functions that should be accessible from the outside 
 int EnergyMeterInit();
+
 int EnergyMeterStart();
+
 int EnergyMeterGetMeasurements(measurementsStruct *measurements);
 #ifdef __cplusplus
 }
